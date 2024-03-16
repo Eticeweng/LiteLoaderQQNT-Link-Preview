@@ -58,8 +58,6 @@ async function fetchSegment(url) {
 		});
 }
 
-
-
 onLoad();
 async function onLoad() {
 	ipcMain.handle(

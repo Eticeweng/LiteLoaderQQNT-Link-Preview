@@ -13,7 +13,7 @@ function htmlParser(htmlString, format = "text/html") {
 // fetch head 里面的属性与文本 默认提取 title 和 icon 地址
 function extractContent(
 	domObject,
-	tags = ["title", ["link[rel*=icon]", "href"]]
+	tags = ["title", ["link[rel~=icon]", "href"]]
 ) {
 	if (!domObject) {
 		return undefined;
@@ -73,6 +73,37 @@ async function sha1(message) {
 	)
 		.map((byte) => byte.toString(16).padStart(2, "0"))
 		.join("");
+}
+
+const STYLE_ID = "link-preview";
+function patchCSS() {
+	let cssNode = document.querySelector(`html > head > style[id=${STYLE_ID}]`);
+	if (cssNode) {
+		cssNode.parentNode.removeChild(cssNode);
+	}
+	let cssPatch = document.createElement("style");
+	cssPatch.setAttribute("id", STYLE_ID);
+	cssPatch.setAttribute("type", "text/css");
+	cssPatch.innerText = `
+	.message-link-preview,
+	.message-link-preview__error {
+		font-size: 12px;
+		display: inline-flex;
+		align-items: center;
+		user-select: none;
+		background-color: black;
+		border-radius: 8px;
+		padding: 0 8px;
+	}
+	.message-link-preview__error {
+		color: red;
+	}
+	.link-preview-icon {
+		height: 15px;
+		width: 15px;
+		margin-right: 3px;
+	}`;
+	document.querySelector("html > head").appendChild(cssPatch);
 }
 
 let cacheMap = new Map();
@@ -146,6 +177,9 @@ async function onLoad() {
 				subtree: true,
 			});
 			clearInterval(loopFinder);
+			patchCSS();
 		}
 	}, 500);
+	
+	
 }
