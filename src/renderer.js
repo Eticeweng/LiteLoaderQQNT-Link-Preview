@@ -37,23 +37,32 @@ function extractContent(
 	return extracted.filter((item) => item);
 }
 
-function render(node, message, error) {
+function render(node, info) {
 	if (!node.classList.contains("link-preview-baked")) {
 		let baseNode = document.createElement("div");
-		if (!error) {
+		if (!info.error) {
 			// 若修改了 fetch 规则请手动修改组装逻辑
 			let infoNodes = [
 				document.createElement("img"),
 				document.createElement("span"),
 			];
-			infoNodes[0].setAttribute("src", message[1]);
+			infoNodes[0].setAttribute(
+				"src",
+				info.result[1].startsWith("http")
+					? info.result[1]
+					: `${info._url.origin}${
+							info.result[1].startsWith("/")
+								? info.result[1]
+								: `/${info.result[1]}`
+					  }`
+			);
 			infoNodes[0].classList.add("link-preview-icon"); // 预设 icon class 可以自定义
-			infoNodes[1].innerText = message[0];
+			infoNodes[1].innerText = info.result[0];
 			infoNodes.forEach((node) => baseNode.appendChild(node));
 			baseNode.classList.add("message-link-preview");
 		} else {
 			let errorNode = document.createElement("span");
-			errorNode.innerText = message;
+			errorNode.innerText = info.result;
 			baseNode.appendChild(errorNode);
 			baseNode.classList.add("message-link-preview__error");
 		}
@@ -120,20 +129,20 @@ async function onLoad() {
 					.call(mutation.addedNodes[0])
 					.endsWith("Text]")
 			) {
+				let url = mutation.addedNodes[0].wholeText;
 				if (
 					mutation.addedNodes[0].parentNode.classList.contains(
 						"text-link"
 					) &&
-					mutation.addedNodes[0].wholeText.startsWith("http")
+					url.startsWith("http")
 				) {
 					console.log("[link-preview] :target matched");
-					let id = await sha1(mutation.addedNodes[0].wholeText);
+					let id = await sha1(url);
 					let nullableResult = cacheMap.get(id);
 					let container = mutation.addedNodes[0].parentNode;
 					if (!nullableResult) {
-						let turn = await window.link_preview.bakePreview(
-							mutation.addedNodes[0].wholeText
-						);
+						let turn = await window.link_preview.bakePreview(url);
+						turn._url = new URL(url);
 						if (!turn.error) {
 							turn.result = extractContent(
 								htmlParser(turn.result)
@@ -149,7 +158,7 @@ async function onLoad() {
 						} else {
 							console.log("[link-preview] error:", turn.result);
 						}
-						render(container, turn.result, turn.error);
+						render(container, turn);
 						cacheMap.set(id, turn);
 					} else {
 						console.log(
@@ -157,11 +166,7 @@ async function onLoad() {
 							nullableResult.error,
 							nullableResult.result
 						);
-						render(
-							container,
-							nullableResult.result,
-							nullableResult.error
-						);
+						render(container, nullableResult);
 					}
 				}
 			}
@@ -180,6 +185,4 @@ async function onLoad() {
 			patchCSS();
 		}
 	}, 500);
-	
-	
 }
