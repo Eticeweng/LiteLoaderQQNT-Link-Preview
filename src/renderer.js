@@ -34,7 +34,7 @@ function extractContent(
 			? nullableNode.getAttribute(tag[1])
 			: nullableNode.textContent;
 	});
-	return extracted.filter((item) => item);
+	return extracted;
 }
 
 function render(node, info) {
@@ -46,18 +46,20 @@ function render(node, info) {
 				document.createElement("img"),
 				document.createElement("span"),
 			];
-			infoNodes[0].setAttribute(
-				"src",
-				info.result[1].startsWith("http")
-					? info.result[1]
-					: `${info._url.origin}${
-							info.result[1].startsWith("/")
-								? info.result[1]
-								: `/${info.result[1]}`
-					  }`
-			);
+			if (info.result[1]) {
+				infoNodes[0].setAttribute(
+					"src",
+					info.result[1].startsWith("http") || info.result[1].startsWith("data")
+						? info.result[1]
+						: `${info._url.origin}${
+								info.result[1].startsWith("/")
+									? info.result[1]
+									: `/${info.result[1]}`
+						  }`
+				);
+			}
 			infoNodes[0].classList.add("link-preview-icon"); // 预设 icon class 可以自定义
-			infoNodes[1].innerText = info.result[0];
+			infoNodes[1].innerText = info.result[0] || "[读取不到标题]";
 			infoNodes.forEach((node) => baseNode.appendChild(node));
 			baseNode.classList.add("message-link-preview");
 		} else {
