@@ -49,7 +49,8 @@ function render(node, info) {
 			if (info.result[1]) {
 				infoNodes[0].setAttribute(
 					"src",
-					info.result[1].startsWith("http") || info.result[1].startsWith("data")
+					info.result[1].startsWith("http") ||
+						info.result[1].startsWith("data")
 						? info.result[1]
 						: `${info._url.origin}${
 								info.result[1].startsWith("/")
