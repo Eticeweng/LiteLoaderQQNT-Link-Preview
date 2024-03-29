@@ -43,7 +43,7 @@ span.link-preview-baked > div.message-link-preview > img {
 抓取规则需要传入符合`document.querySelector`要求的选择器  
 若直接读取标签内文字(`innerText`)请直接传入  
 若需要读取属性(`getAttribute`)请传入以下形态的数组  
-`['fatherSelector', 'attributeName']`
+`['fatherSelector', 'attributeName']`  
 这样的话，解析器就会且只会读取符合`fatherSelector`下第一个匹配元素的匹配属性的值了  
 **渲染组装器不会自动识别抓取的元素**  
 **若想显示对应抓取的数据请到`renderer.js`中的`render`函数中自定义渲染组装逻辑**
