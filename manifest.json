@@ -3,7 +3,7 @@
     "type": "extension",
     "name": "Link Preview",
     "slug": "link_preview",
-    "description": "一个用于LiteLoaderQQNT的extension",
+    "description": "为聊天区域中的所有链接添加其网页标题和图标，适用于所有http或https协议的链接",
     "version": "0.1.0",
     "authors": [{
         "name": "eticeweng",
