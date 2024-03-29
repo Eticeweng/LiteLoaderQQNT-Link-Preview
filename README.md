@@ -1,7 +1,6 @@
 # LiteLoaderQQNT-Link-Preview  
 为聊天区域中的所有链接添加其网页标题和图标  
 适用于所有`http`或`https`协议的链接  
-能否读取成功也会受到用户身处的网络环境影响，此插件会跟随QQ的代理设置  
 ![{1E1A5269-A376-4d1c-B8DE-C6CA7612C804}](https://github.com/Eticeweng/LiteLoaderQQNT-Link-Preview/assets/43090280/0a4a4b7e-f43e-4a76-94e1-6f152e6c8610)
 
 ### 样式  
