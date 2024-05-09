@@ -158,9 +158,6 @@ async function loadPreview(url, container) {
 		if (!turn.error) {
 			turn.result = extractContent(htmlParser(turn.result));
 			CUSTOM_LOG("baked:", turn.result);
-			if (cacheMap.size >= 100) {
-				cacheMap.clear();
-			}
 		} else {
 			CUSTOM_LOG("error:", turn.code);
 		}
@@ -168,6 +165,9 @@ async function loadPreview(url, container) {
 			render(container, turn);
 		} catch (e) {
 		} finally {
+			if (cacheMap.size >= 100) {
+				cacheMap.clear();
+			}
 			cacheMap.set(id, turn);
 		}
 		CUSTOM_LOG("now cached", cacheMap.size);
