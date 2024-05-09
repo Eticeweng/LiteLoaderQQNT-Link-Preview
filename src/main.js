@@ -12,9 +12,6 @@ const { app, ipcMain, dialog } = require("electron");
 
 module.exports.onBrowserWindowCreated = (window) => {
 	// window 为 Electron 的 BrowserWindow 实例
-	window.webContents.on("did-stop-loading", () => {
-		console.log("launched");
-	});
 };
 
 const STANDARD_HEADERS = {
@@ -23,7 +20,8 @@ const STANDARD_HEADERS = {
 };
 async function fetchSegment(url) {
 	const controller = new AbortController();
-	return await fetch(url, {
+	CUSTOM_LOG("about to fetch", url);
+	let pendingFetch = await fetch(url, {
 		headers: STANDARD_HEADERS,
 		signal: controller.signal,
 	})
@@ -33,29 +31,47 @@ async function fetchSegment(url) {
 			const textDecoder = new TextDecoder();
 			let read = "";
 			let receivedLength = 0;
-			await reader.read().then(function _innerRead_({ done, value }) {
+			return await reader.read().then(function _innerRead_({ done, value }) {
 				if (done) {
-					console.log(":reading is done", receivedLength);
-					return;
+					CUSTOM_LOG(":reading is done", receivedLength);
+					return {
+						error: true,
+						code: "FINISH_READING",
+						receivedLength,
+					};
 				}
-				console.log(":reading", receivedLength);
 				read += textDecoder.decode(value);
 				receivedLength += value.length;
+				if (!read.startsWith("<!DOCTYPE html>")) {
+					controller.abort();
+					CUSTOM_LOG(
+						":endpoint not standard HTML, aborting",
+						receivedLength
+					);
+					return {
+						error: true,
+						code: "NON_STANDARD_HTML",
+						receivedLength,
+					};
+				}
 				if (read.lastIndexOf("</head>") > -1) {
-					controller.abort({ read, receivedLength });
-					console.log(":endpoint reached, aborting", receivedLength);
-					return;
+					controller.abort();
+					CUSTOM_LOG(":endpoint reached, aborting", receivedLength);
+					return {
+						error: false,
+						code: "FETCHED",
+						receivedLength,
+						result: read,
+					};
 				}
 				return reader.read().then(_innerRead_);
 			});
-			return read;
 		})
-		.then((r) => {
-			return { error: false, result: r };
-		})
-		.catch((err) => {
-			return { error: true, result: err };
-		});
+		.catch(err => ({
+			error: true,
+			code: "FETCH_API_ERROR",
+		}));
+		return pendingFetch;
 }
 
 onLoad();
@@ -66,4 +82,8 @@ async function onLoad() {
 			return await fetchSegment(chunk);
 		}
 	);
+}
+
+function CUSTOM_LOG(...content) {
+	console.log("[Link-Preview]", ...content);
 }

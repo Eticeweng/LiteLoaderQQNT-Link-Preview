@@ -5,6 +5,16 @@ export const onSettingWindowCreated = (view) => {
 	// view 为 Element 对象，修改将同步到插件设置界面
 };
 
+function debounce(fn, time) {
+	let timer = null;
+	return function (...args) {
+		timer && clearTimeout(timer);
+		timer = setTimeout(() => {
+			fn.apply(this, args);
+		}, time);
+	};
+}
+
 function htmlParser(htmlString, format = "text/html") {
 	let parser = new DOMParser();
 	return parser.parseFromString(htmlString, format);
@@ -37,6 +47,13 @@ function extractContent(
 	return extracted;
 }
 
+const ERROR_CODE_MAP = {
+	FETCHED: "读取完毕",
+	FINISH_READING: "读取完毕但未找到信息",
+	NON_STANDARD_HTML: "非标准HTML页面",
+	FETCH_API_ERROR: "FetchAPI错误",
+};
+
 function render(node, info) {
 	if (!node.classList.contains("link-preview-baked")) {
 		let baseNode = document.createElement("div");
@@ -65,7 +82,7 @@ function render(node, info) {
 			baseNode.classList.add("message-link-preview");
 		} else {
 			let errorNode = document.createElement("span");
-			errorNode.innerText = info.result;
+			errorNode.innerText = ERROR_CODE_MAP[info.code];
 			baseNode.appendChild(errorNode);
 			baseNode.classList.add("message-link-preview__error");
 		}
@@ -97,28 +114,76 @@ function patchCSS() {
 	cssPatch.setAttribute("id", STYLE_ID);
 	cssPatch.setAttribute("type", "text/css");
 	cssPatch.innerText = `
-	.message-link-preview,
-	.message-link-preview__error {
+	div.message-link-preview,
+	div.message-link-preview__error {
 		font-size: 12px;
 		display: inline-flex;
 		align-items: center;
 		user-select: none;
 		background-color: black;
 		border-radius: 8px;
-		padding: 0 8px;
+		padding-top: 2px;
+		padding-right: 2px;
+		padding-left: 8px;
+		padding-right: 8px;
 	}
-	.message-link-preview__error {
-		color: red;
+	div.message-link-preview__error {
+		color: #ffa4a4;
 	}
-	.link-preview-icon {
+	img.link-preview-icon {
 		height: 15px;
 		width: 15px;
 		margin-right: 3px;
-	}`;
+	}
+	span.link-preview-baked:hover > div.message-link-preview,
+	span.link-preview-baked:hover > div.message-link-preview__error {
+		filter: brightness(1.5);
+	}`.replaceAll(/\s/g, "");
 	document.querySelector("html > head").appendChild(cssPatch);
 }
 
+const FETCHING = new Set();
 let cacheMap = new Map();
+async function loadPreview(url, container) {
+	let id = await sha1(url);
+	let nullableResult = cacheMap.get(id);
+	if (!nullableResult) {
+		if (FETCHING.has(id)) {
+			return;
+		}
+		FETCHING.add(id);
+		let turn = await window.link_preview.bakePreview(url);
+		FETCHING.delete(id);
+		turn._url = new URL(url);
+		if (!turn.error) {
+			turn.result = extractContent(htmlParser(turn.result));
+			CUSTOM_LOG("baked:", turn.result);
+			if (cacheMap.size >= 100) {
+				cacheMap.clear();
+			}
+		} else {
+			CUSTOM_LOG("error:", turn.code);
+		}
+		try {
+			render(container, turn);
+		} catch (e) {
+		} finally {
+			cacheMap.set(id, turn);
+		}
+		CUSTOM_LOG("now cached", cacheMap.size);
+	} else {
+		// if (nullableResult.error) {
+		// 	CUSTOM_LOG("baked-error:", nullableResult.code);
+		// } else {
+		// 	CUSTOM_LOG(
+		// 		"baked-cache:",
+		// 		nullableResult.error,
+		// 		nullableResult.result
+		// 	);
+		// }
+		debounce(render(container, nullableResult), 100);
+	}
+}
 onLoad();
 
 async function onLoad() {
@@ -139,38 +204,7 @@ async function onLoad() {
 					) &&
 					url.startsWith("http")
 				) {
-					console.log("[link-preview] :target matched");
-					let id = await sha1(url);
-					let nullableResult = cacheMap.get(id);
-					let container = mutation.addedNodes[0].parentNode;
-					if (!nullableResult) {
-						let turn = await window.link_preview.bakePreview(url);
-						turn._url = new URL(url);
-						if (!turn.error) {
-							turn.result = extractContent(
-								htmlParser(turn.result)
-							);
-							console.log("[link-preview] baked:", turn.result);
-							console.log(
-								"[link-preview] :now cached",
-								cacheMap.size
-							);
-							if (cacheMap.size >= 100) {
-								cacheMap.clear();
-							}
-						} else {
-							console.log("[link-preview] error:", turn.result);
-						}
-						render(container, turn);
-						cacheMap.set(id, turn);
-					} else {
-						console.log(
-							"[link-preview] baked-cache:",
-							nullableResult.error,
-							nullableResult.result
-						);
-						render(container, nullableResult);
-					}
+					loadPreview(url, mutation.addedNodes[0].parentNode);
 				}
 			}
 		}
@@ -178,7 +212,7 @@ async function onLoad() {
 	let loopFinder = setInterval(() => {
 		let targetNode = document.querySelector(".ml-list.list");
 		if (targetNode !== null) {
-			console.log("[link-preview] :chat area loaded and injected");
+			CUSTOM_LOG("chat area loaded and injected");
 			observer.observe(document.querySelector(".ml-list.list"), {
 				attributes: false,
 				childList: true,
@@ -188,4 +222,8 @@ async function onLoad() {
 			patchCSS();
 		}
 	}, 500);
+}
+
+function CUSTOM_LOG(...content) {
+	console.log("[Link-Preview]", ...content);
 }
