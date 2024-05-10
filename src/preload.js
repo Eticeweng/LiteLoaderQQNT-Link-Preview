@@ -1,8 +1,8 @@
 // Electron 主进程 与 渲染进程 交互的桥梁
-const { contextBridge, ipcRenderer } = require("electron");
+const {contextBridge, ipcRenderer} = require("electron");
 
 // 在window对象下导出只读对象
 contextBridge.exposeInMainWorld("link_preview", {
-	bakePreview: async (chunk) =>
-		ipcRenderer.invoke("LiteLoader.link_preview.bakePreview", chunk)
+    bakePreview: async (chunk) =>
+        ipcRenderer.invoke("LiteLoader.link_preview.bakePreview", chunk)
 });
