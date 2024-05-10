@@ -18,6 +18,7 @@ const STANDARD_HEADERS = {
 	"User-Agent":
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 };
+const MARK = ["<html>", "<!DOCTYPE html"];
 async function fetchSegment(url) {
 	const controller = new AbortController();
 	CUSTOM_LOG("about to fetch", url);
@@ -42,7 +43,9 @@ async function fetchSegment(url) {
 				}
 				read += textDecoder.decode(value);
 				receivedLength += value.length;
-				if (!read.startsWith("<!DOCTYPE html>")) {
+				let trimmedRead = read.trimStart();
+				let valid = MARK.find(mark => trimmedRead.startsWith(mark));
+				if (!valid) {
 					controller.abort();
 					CUSTOM_LOG(
 						":endpoint not standard HTML, aborting",

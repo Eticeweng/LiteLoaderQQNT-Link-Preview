@@ -142,18 +142,18 @@ function patchCSS() {
 	document.querySelector("html > head").appendChild(cssPatch);
 }
 
-const FETCHING = new Set();
+let fetching = new Set();
 let cacheMap = new Map();
 async function loadPreview(url, container) {
 	let id = await sha1(url);
 	let nullableResult = cacheMap.get(id);
 	if (!nullableResult) {
-		if (FETCHING.has(id)) {
+		if (fetching.has(id)) {
 			return;
 		}
-		FETCHING.add(id);
+		fetching.add(id);
 		let turn = await window.link_preview.bakePreview(url);
-		FETCHING.delete(id);
+		fetching.delete(id);
 		turn._url = new URL(url);
 		if (!turn.error) {
 			turn.result = extractContent(htmlParser(turn.result));
@@ -181,10 +181,16 @@ async function loadPreview(url, container) {
 		// 		nullableResult.result
 		// 	);
 		// }
-		debounce(render(container, nullableResult), 100);
+		render(container, nullableResult);
 	}
 }
 onLoad();
+
+// todo: debug
+// Object.defineProperty(window, "lpDebug", {
+// 	value: cacheMap,
+// 	writable: false
+// });
 
 async function onLoad() {
 	const observer = new MutationObserver(async (mutationsList) => {
