@@ -84,6 +84,15 @@ function render(node, info) {
 		node.classList.add("link-preview-baked");
 	}
 }
+function renderLoading(node) {
+	if (!node.classList.contains("link-preview-loading-patched")) {
+		let baseNode = document.createElement("div");
+		baseNode.classList.add("link-preview-loading");
+		node.appendChild(baseNode);
+		node.classList.add("link-preview-loading-patched");
+		return baseNode;
+	}
+}
 
 async function sha1(message) {
 	return Array.from(
@@ -116,10 +125,7 @@ function patchCSS() {
 		user-select: none;
 		background-color: black;
 		border-radius: 8px;
-		padding-top: 2px;
-		padding-right: 2px;
-		padding-left: 8px;
-		padding-right: 8px;
+		padding: 2px 8px;
 	}
 	div.message-link-preview__error {
 		color: #ffa4a4;
@@ -132,7 +138,24 @@ function patchCSS() {
 	span.link-preview-baked:hover > div.message-link-preview,
 	span.link-preview-baked:hover > div.message-link-preview__error {
 		filter: brightness(1.5);
-	}`.replaceAll(/\s/g, "");
+	}
+	.link-preview-loading {
+		display: inline-flex;
+		border: 2px dotted #ffffff;
+		height: 10px;
+		width: 10px;
+		border-radius: 100%;
+		border-top-color: transparent;
+		animation: link-preview-loading 1s ease-in-out infinite;
+	}
+	@keyframes link-preview-loading {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}`.replaceAll(/\n/g, "");
 	document.querySelector("html > head").appendChild(cssPatch);
 }
 
@@ -146,7 +169,9 @@ async function loadPreview(url, container) {
 			return;
 		}
 		fetching.add(id);
+		let nullableLoadingNode = renderLoading(container);
 		let turn = await window.link_preview.bakePreview(url);
+		(nullableLoadingNode) && container.removeChild(nullableLoadingNode);
 		fetching.delete(id);
 		turn._url = new URL(url);
 		if (!turn.error) {
