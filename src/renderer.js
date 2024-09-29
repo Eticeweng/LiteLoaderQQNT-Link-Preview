@@ -1,3 +1,8 @@
+const { plugin: pluginPath, data: dataPath } = LiteLoader.plugins["link_preview"].path;
+function setConfig(cfg) {
+    LiteLoader.api.config.set("link_preview", cfg);
+}
+
 // 运行在 Electron 渲染进程 下的页面脚本
 function debounce(fn, time) {
     let timer = null;
@@ -75,7 +80,7 @@ function render(node, info) {
             baseNode.classList.add("message-link-preview");
         } else {
             let errorNode = document.createElement("span");
-            errorNode.innerText = ERROR_CODE_MAP[info.code];
+            errorNode.innerText = `${ERROR_CODE_MAP[info.code]}: \"${info.reason}\"`;
             baseNode.appendChild(errorNode);
             baseNode.classList.add("message-link-preview__error");
         }
@@ -206,13 +211,29 @@ async function loadPreview(url, container) {
     }
 }
 
-onLoad();
+let configCache = {};
+export const onSettingWindowCreated = async (view) => {
+    // view 为 Element 对象，修改将同步到插件设置界面
+    let htmlEntry = `local:///${pluginPath}/src/settings/index.html`;
+    let cssEntry = `local:///${pluginPath}/src/settings/index.css`
+    let raw = await (await fetch(htmlEntry)).text();
+    view.insertAdjacentHTML("afterbegin", raw);
+    document.head.insertAdjacentHTML("beforeend", `<link id="link-preview" rel="stylesheet" href="${cssEntry}" />`);
 
-// todo: debug
-// Object.defineProperty(window, "lpDebug", {
-// 	value: cacheMap,
-// 	writable: false
-// });
+    let inputNodes = view.querySelectorAll(".link-preview-standard-input");
+
+    let config = await LiteLoader.api.config.get("link_preview");
+    inputNodes.forEach(async node => {
+        node.value = config[node.id];
+        node.addEventListener("input", (e) => {
+            configCache[node.id] = e.target.value;
+        });
+    });
+
+    view.querySelector("#save").addEventListener("click", () => setConfig(configCache));
+}
+
+onLoad();
 
 async function onLoad() {
     const observer = new MutationObserver(async (mutationsList) => {

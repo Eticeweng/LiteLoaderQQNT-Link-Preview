@@ -9,25 +9,37 @@ const {app, ipcMain, dialog} = require("electron");
 //     "#/forward",
 //     "#/record"
 // ]
-
-module.exports.onBrowserWindowCreated = (window) => {
+module.exports.onBrowserWindowCreated = async (window) => {
     // window 为 Electron 的 BrowserWindow 实例
 };
 
+const DEFAULT_CONFIG = {
+    timeout_second_input: 10000
+};
+
+
 const STANDARD_HEADERS = {
     "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
 };
 const MARK = ["<html>", "<!DOCTYPE html"];
 
 async function fetchSegment(url) {
     const controller = new AbortController();
-    CUSTOM_LOG("about to fetch", url);
+    const config = await LiteLoader.api.config.get("link_preview", DEFAULT_CONFIG)
+    let isTimeout = false;
+    let fetchTimeoutHanlde = setTimeout(() => {
+        isTimeout = true;
+        controller.abort();
+    }, +config.timeout_second_input);
     return await fetch(url, {
         headers: STANDARD_HEADERS,
         signal: controller.signal,
     })
-        .then((response) => response.body)
+        .then((response) => {
+            clearTimeout(fetchTimeoutHanlde);
+            return response.body;
+        })
         .then(async (body) => {
             const reader = body.getReader();
             const textDecoder = new TextDecoder();
@@ -49,7 +61,7 @@ async function fetchSegment(url) {
                 if (!valid) {
                     controller.abort();
                     CUSTOM_LOG(
-                        ":endpoint not standard HTML, aborting",
+                        url, ":endpoint not standard HTML, aborting",
                         receivedLength
                     );
                     return {
@@ -71,10 +83,14 @@ async function fetchSegment(url) {
                 return reader.read().then(_innerRead_);
             });
         })
-        .catch(err => ({
-            error: true,
-            code: "FETCH_API_ERROR",
-        }));
+        .catch(err => {
+            CUSTOM_LOG(err);
+            return ({
+                error: true,
+                code: "FETCH_API_ERROR",
+                reason: isTimeout ? "超时" : err.toString()
+            });
+        });
 }
 
 onLoad();
