@@ -4,7 +4,7 @@
     "name": "Link Preview",
     "slug": "link_preview",
     "description": "为聊天区域中的所有链接添加其网页标题和图标，适用于所有http或https协议的链接",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "authors": [{
         "name": "eticeweng",
         "link": "https://github.com/eticeweng"
@@ -14,5 +14,13 @@
         "renderer": "./src/renderer.js",
         "main": "./src/main.js",
         "preload": "./src/preload.js"
+    },
+    "repository": {
+        "repo": "Eticeweng/LiteLoaderQQNT-Link-Preview",
+        "branch": "master",
+        "release": {
+            "tag": "0.1.3",
+            "file": "LiteLoaderQQNT-Link-Preview.zip"
+        }
     }
 }
