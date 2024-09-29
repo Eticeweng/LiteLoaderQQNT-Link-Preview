@@ -6,7 +6,7 @@
 ### 样式  
 上面截图中的为默认样式  
 可以通过css自定义默认样式  
-正常读取的链接样式的class为`message-link-previewr`  
+正常读取的链接样式的class为`message-link-preview`  
 读取失败的链接样式的class为`message-link-preview__error`  
 
 ### 缓存
