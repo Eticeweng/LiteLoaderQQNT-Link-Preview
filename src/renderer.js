@@ -80,7 +80,11 @@ function render(node, info) {
             baseNode.classList.add("message-link-preview");
         } else {
             let errorNode = document.createElement("span");
-            errorNode.innerText = `${ERROR_CODE_MAP[info.code]}: \"${info.reason}\"`;
+            if (info.code === "FETCH_API_ERROR") {
+                errorNode.innerText = `${ERROR_CODE_MAP[info.code]}: \"${info.reason}\"`;
+            } else {
+                errorNode.innerText = ERROR_CODE_MAP[info.code];
+            }
             baseNode.appendChild(errorNode);
             baseNode.classList.add("message-link-preview__error");
         }
